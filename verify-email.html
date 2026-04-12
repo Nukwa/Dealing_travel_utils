@@ -71,12 +71,6 @@
         
         .status-icon.loading {
             background: #f0f0f0;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
         }
         
         .status-icon.success {
@@ -126,10 +120,6 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
         
-        .button-secondary {
-            background: #6c757d;
-        }
-        
         .footer {
             background: #f8f9fa;
             padding: 20px;
@@ -137,23 +127,6 @@
             font-size: 12px;
             color: #999;
             border-top: 1px solid #eee;
-        }
-        
-        .loader {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -165,7 +138,6 @@
             <p>Vérification d'email</p>
         </div>
         <div class="content" id="content">
-            <!-- Contenu dynamique -->
             <div class="status-icon loading" id="statusIcon">⏳</div>
             <div class="title" id="title">Vérification en cours...</div>
             <div class="message" id="message">Veuillez patienter pendant que nous vérifions votre email.</div>
@@ -184,13 +156,16 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         
+        console.log('🔍 [Page] URL complète:', window.location.href);
+        console.log('🔍 [Page] Token récupéré:', token);
+        console.log('🔍 [Page] Token length:', token?.length);
+        
         // Éléments DOM
         const statusIcon = document.getElementById('statusIcon');
         const titleEl = document.getElementById('title');
         const messageEl = document.getElementById('message');
         const buttonContainer = document.getElementById('buttonContainer');
         
-        // Fonction pour mettre à jour l'affichage
         function updateUI(status, title, message, button = null) {
             statusIcon.className = 'status-icon ' + status;
             
@@ -218,25 +193,18 @@
             }
         }
         
-        // Fonction pour rediriger vers l'application
         function redirectToApp() {
-            // Rediriger vers l'application mobile (schéma URL personnalisé)
-            // Pour iOS: dealingtravel://
-            // Pour Android: dealingtravel://
             window.location.href = 'dealingtravel://verify-email?token=' + token;
-            
-            // Fallback: afficher un message
             setTimeout(() => {
                 updateUI(
                     'info',
                     'Redirection automatique',
                     'Si l\'application ne s\'ouvre pas automatiquement, veuillez ouvrir DealingTravel manuellement.',
-                    '<a href="https://play.google.com/store/apps/details?id=com.dealingtravel.app" class="button" target="_blank">Ouvrir DealingTravel</a>'
+                    '<a href="#" class="button" onclick="window.location.href=\'dealingtravel://\'">Ouvrir l\'application</a>'
                 );
             }, 2000);
         }
         
-        // Fonction pour renvoyer l'email de vérification
         async function resendVerification() {
             const email = localStorage.getItem('pending_verification_email');
             
@@ -250,9 +218,10 @@
                 return;
             }
             
-            updateUI('loading', 'Renvoyé en cours...', 'Veuillez patienter...');
+            updateUI('loading', 'Envoi en cours...', 'Veuillez patienter...');
             
             try {
+                console.log('📡 [Page] Envoi requête resend pour:', email);
                 const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
                     method: 'POST',
                     headers: {
@@ -262,6 +231,7 @@
                 });
                 
                 const data = await response.json();
+                console.log('📡 [Page] Réponse resend:', data);
                 
                 if (data.success) {
                     updateUI(
@@ -279,6 +249,7 @@
                     );
                 }
             } catch (error) {
+                console.error('❌ [Page] Erreur resend:', error);
                 updateUI(
                     'error',
                     'Erreur réseau',
@@ -295,14 +266,14 @@
                     'info',
                     'Connexion',
                     'Veuillez vous connecter à l\'application DealingTravel.',
-                    '<a href="https://dealingtravel.com" class="button">Ouvrir le site</a>'
+                    '<a href="#" class="button" onclick="window.location.href=\'dealingtravel://\'">Ouvrir l\'application</a>'
                 );
             }, 2000);
         }
         
-        // Vérifier le token
         async function verifyEmail() {
             if (!token) {
+                console.log('❌ [Page] Aucun token');
                 updateUI(
                     'error',
                     'Token manquant',
@@ -311,6 +282,8 @@
                 );
                 return;
             }
+            
+            console.log('📡 [Page] Envoi requête verify avec token:', token);
             
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
@@ -321,7 +294,9 @@
                     body: JSON.stringify({ token })
                 });
                 
+                console.log('📡 [Page] Status réponse:', response.status);
                 const data = await response.json();
+                console.log('📡 [Page] Données réponse:', data);
                 
                 if (data.success) {
                     updateUI(
@@ -339,11 +314,11 @@
                     );
                 }
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('❌ [Page] Erreur réseau:', error);
                 updateUI(
                     'error',
                     'Erreur de connexion',
-                    'Impossible de contacter le serveur. Veuillez vérifier votre connexion internet.',
+                    'Impossible de contacter le serveur. Vérifiez votre connexion internet.',
                     '<button onclick="verifyEmail()" class="button">Réessayer</button>'
                 );
             }
@@ -352,6 +327,7 @@
         // Stocker l'email pour renvoi ultérieur
         const emailParam = urlParams.get('email');
         if (emailParam) {
+            console.log('📧 [Page] Email stocké:', emailParam);
             localStorage.setItem('pending_verification_email', emailParam);
         }
         
